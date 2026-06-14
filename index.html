@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>スターコーデライブ Dress-up+</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff;background:#12131d}
+.screen{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 10%,#ff7bc933,transparent 34%),radial-gradient(circle at 80% 10%,#7ad7ff33,transparent 34%),linear-gradient(150deg,#12131d,#1a1d2b)}
+.wrap{max-width:1260px;margin:auto;display:grid;grid-template-columns:1fr 430px;gap:14px} @media(max-width:980px){.wrap{grid-template-columns:1fr}}
+.panel{background:#ffffff14;border:1px solid #ffffff24;border-radius:22px;padding:16px;backdrop-filter:blur(8px);box-shadow:0 16px 48px #0006;margin-bottom:14px}
+h1,h2{margin:0 0 12px} .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px} @media(max-width:780px){.grid{grid-template-columns:1fr}}
+.card{display:grid;grid-template-columns:92px 1fr;gap:8px;min-height:112px;background:#ffffff12;border:2px solid transparent;border-radius:18px;overflow:hidden;cursor:pointer}
+.card.sel{border-color:#ff7bc9;box-shadow:0 0 0 3px #ff7bc933} .card img{width:92px;height:112px;object-fit:contain;background:#ffffff18}
+.name{font-weight:900} .meta{color:#d7dcff;font-size:12px;line-height:1.5} .body{padding:10px}
+button{border:0;border-radius:999px;padding:13px 20px;font-weight:900;background:linear-gradient(135deg,#ff7bc9,#7ad7ff);color:#10121b;cursor:pointer}
+button.dark{background:#ffffff18;color:#fff;border:1px solid #ffffff24}
+.preview{position:sticky;top:12px} .doll{position:relative;height:660px;background:linear-gradient(#dffcf3,#c9fff5);border-radius:24px;overflow:hidden;border:1px solid #ffffff30}
+.layer{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.info{position:absolute;left:12px;right:12px;bottom:12px;background:#111827aa;border:1px solid #ffffff24;border-radius:18px;padding:12px;backdrop-filter:blur(8px)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px} .stat{background:#ffffff12;border-radius:16px;padding:12px} .big{font-size:26px;font-weight:950}
+#live{display:none} .stage{position:relative;height:720px;border-radius:24px;overflow:hidden;background:#111;border:1px solid #ffffff24}
+#stageBg{position:absolute;inset:0;background-size:cover;background-position:center;filter:saturate(1.08)} #canvas{position:absolute;inset:0;width:100%;height:100%;z-index:5}
+.liveDoll{position:absolute;left:-4%;bottom:-2%;width:55%;height:94%;z-index:2} .hud{position:absolute;top:12px;left:12px;right:12px;z-index:8;display:flex;justify-content:space-between;gap:8px}
+.badge{background:#111827bb;border:1px solid #ffffff30;border-radius:16px;padding:10px 12px} .judge{font-size:32px;font-weight:950;text-align:center;min-height:42px;margin-top:8px}
+.lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px} .lane{background:#ffffff18;color:#fff;border:1px solid #ffffff24;border-radius:16px}
+</style>
+</head>
+<body>
+<div id="setup" class="screen">
+  <div class="wrap">
+    <main>
+      <div class="panel"><h1>スターコーデライブ Dress-up+</h1><p class="meta">素体・トップス・スカート・シューズを選んでライブへ。</p></div>
+      <div class="panel"><h2>素体</h2><div id="bodies" class="grid"></div></div>
+      <div class="panel"><h2>トップス</h2><div id="tops" class="grid"></div></div>
+      <div class="panel"><h2>スカート</h2><div id="bottoms" class="grid"></div></div>
+      <div class="panel"><h2>シューズ</h2><div id="shoes" class="grid"></div></div>
+      <div class="panel"><h2>ステージ・曲</h2><div id="stages" class="grid"></div><br><div id="songs" class="grid"></div></div>
+    </main>
+    <aside class="preview">
+      <div class="doll">
+        <img id="pBase" class="layer"><img id="pTop" class="layer"><img id="pBottom" class="layer"><img id="pShoes" class="layer">
+        <div class="info"><div id="pName" class="name"></div><div id="pMeta" class="meta"></div></div>
+      </div>
+      <div class="panel"><div class="stats"><div class="stat"><div class="meta">Power</div><div id="power" class="big">0</div></div><div class="stat"><div class="meta">Bonus</div><div id="bonus" class="big">1.00x</div></div></div><br><button onclick="start()">ライブ開始</button></div>
+    </aside>
+  </div>
+</div>
+<div id="live" class="screen">
+ <div class="wrap">
+  <main>
+    <div class="stage"><div id="stageBg"></div><div class="liveDoll"><img id="lBase" class="layer"><img id="lTop" class="layer"><img id="lBottom" class="layer"><img id="lShoes" class="layer"></div><canvas id="canvas"></canvas><div class="hud"><div class="badge" id="songTitle"></div><div class="badge" id="time">30.0</div></div></div>
+    <div id="judge" class="judge"></div>
+    <div class="lanes"><button class="lane" data-lane="0">D</button><button class="lane" data-lane="1">F</button><button class="lane" data-lane="2">J</button><button class="lane" data-lane="3">K</button></div>
+  </main>
+  <aside><div class="panel"><h2>Live</h2><div class="stats"><div class="stat"><div class="meta">Score</div><div id="score" class="big">0</div></div><div class="stat"><div class="meta">Combo</div><div id="combo" class="big">0</div></div></div><br><button class="dark" onclick="quit()">戻る</button></div></aside>
+ </div>
+</div>
+<audio id="bgm"></audio>
+<script>
+const manifest={"dressup": {"bodies": [{"id": "body_kirara", "name": "星宮きらら", "nickname": "Kirara", "theme": "ポップ", "desc": "キラキラ王道センター系の素体", "image": "assets/dressup/base/body_kirara.png"}, {"id": "body_luna", "name": "蒼月ルナ", "nickname": "Luna", "theme": "クール", "desc": "澄んだ雰囲気のクール系素体", "image": "assets/dressup/base/body_luna.png"}, {"id": "body_hanii", "name": "桃瀬はにぃ", "nickname": "Hanii", "theme": "キュート", "desc": "ふわっと甘いキュート系素体", "image": "assets/dressup/base/body_hanii.png"}], "tops": [{"id": "star_pop_top", "name": "スターポップ・トップス", "set": "Star Pop", "attr": "ポップ", "image": "assets/dressup/tops/star_pop_top.png", "power": 380}, {"id": "moonlight_top", "name": "ムーンライト・トップス", "set": "Moonlight", "attr": "クール", "image": "assets/dressup/tops/moonlight_top.png", "power": 400}, {"id": "honey_pop_top", "name": "ハニーポップ・トップス", "set": "Honey Pop", "attr": "キュート", "image": "assets/dressup/tops/honey_pop_top.png", "power": 370}, {"id": "royal_berry_top", "name": "ロイヤルベリー・トップス", "set": "Royal Berry", "attr": "エレガント", "image": "assets/dressup/tops/royal_berry_top.png", "power": 420}, {"id": "sky_prism_top", "name": "スカイプリズム・トップス", "set": "Sky Prism", "attr": "シャイン", "image": "assets/dressup/tops/sky_prism_top.png", "power": 410}], "bottoms": [{"id": "star_pop_bottom", "name": "スターポップ・スカート", "set": "Star Pop", "attr": "ポップ", "image": "assets/dressup/bottoms/star_pop_bottom.png", "power": 360}, {"id": "moonlight_bottom", "name": "ムーンライト・スカート", "set": "Moonlight", "attr": "クール", "image": "assets/dressup/bottoms/moonlight_bottom.png", "power": 390}, {"id": "honey_pop_bottom", "name": "ハニーポップ・スカート", "set": "Honey Pop", "attr": "キュート", "image": "assets/dressup/bottoms/honey_pop_bottom.png", "power": 350}, {"id": "royal_berry_bottom", "name": "ロイヤルベリー・スカート", "set": "Royal Berry", "attr": "エレガント", "image": "assets/dressup/bottoms/royal_berry_bottom.png", "power": 405}, {"id": "sky_prism_bottom", "name": "スカイプリズム・スカート", "set": "Sky Prism", "attr": "シャイン", "image": "assets/dressup/bottoms/sky_prism_bottom.png", "power": 395}], "shoes": [{"id": "star_pop_shoes", "name": "スターポップ・ブーツ", "set": "Star Pop", "attr": "ポップ", "image": "assets/dressup/shoes/star_pop_shoes.png", "power": 260}, {"id": "moonlight_shoes", "name": "ムーンライト・ブーツ", "set": "Moonlight", "attr": "クール", "image": "assets/dressup/shoes/moonlight_shoes.png", "power": 280}, {"id": "honey_pop_shoes", "name": "ハニーポップ・ブーツ", "set": "Honey Pop", "attr": "キュート", "image": "assets/dressup/shoes/honey_pop_shoes.png", "power": 250}, {"id": "royal_berry_shoes", "name": "ロイヤルベリー・ブーツ", "set": "Royal Berry", "attr": "エレガント", "image": "assets/dressup/shoes/royal_berry_shoes.png", "power": 300}, {"id": "sky_prism_shoes", "name": "スカイプリズム・ブーツ", "set": "Sky Prism", "attr": "シャイン", "image": "assets/dressup/shoes/sky_prism_shoes.png", "power": 295}]}, "songs": [{"id": "song01", "title": "スターコーデライブ！", "display": "スターコーデライブ！", "bpm": 132, "key": "C major", "theme": "王道キラキラアイドルポップ", "duration": 30.0, "audio": "assets/audio/star_coordinate_live.wav"}, {"id": "song02", "title": "ムーンライトメロディ", "display": "ムーンライトメロディ", "bpm": 128, "key": "G major", "theme": "やさしめクール系ナイトステージ", "duration": 30.0, "audio": "assets/audio/moonlight_melody.wav"}, {"id": "song03", "title": "ハニーポップ・ジャンプ！", "display": "ハニーポップ・ジャンプ！", "bpm": 140, "key": "D major", "theme": "超キュートで弾けるキャンディポップ", "duration": 30.0, "audio": "assets/audio/honey_pop_jump.wav"}, {"id": "song04", "title": "スパークル・ステージ・フィナーレ", "display": "スパークル・ステージ・フィナーレ", "bpm": 136, "key": "A major", "theme": "フィナーレ用の前向きアンセム", "duration": 30.0, "audio": "assets/audio/sparkle_stage_finale.wav"}], "stages": [{"id": "stage01", "name": "スターライトステージ", "image": "assets/images/stage_main.png", "theme": "ポップ"}, {"id": "stage02", "name": "ムーンライトステージ", "image": "assets/images/stage_moon.png", "theme": "クール"}, {"id": "stage03", "name": "ハニーキャンディステージ", "image": "assets/images/stage_honey.png", "theme": "キュート"}]};
+const S={body:manifest.dressup.bodies[0].id,top:manifest.dressup.tops[0].id,bottom:manifest.dressup.bottoms[0].id,shoes:manifest.dressup.shoes[0].id,stage:manifest.stages[0].id,song:manifest.songs[0].id,notes:[],score:0,combo:0,start:0,run:false};
+const $=id=>document.getElementById(id), f=(a,id)=>a.find(x=>x.id===id);
+function item(arr,key,box){$(box).innerHTML='';arr.forEach(x=>{let e=document.createElement('div');e.className='card '+(S[key]===x.id?'sel':'');e.innerHTML=`<img src="${x.image}"><div class="body"><div class="name">${x.name||x.display}</div><div class="meta">${x.desc||x.set||x.theme||''} ${x.power?' / Power '+x.power:''}</div></div>`;e.onclick=()=>{S[key]=x.id;drawSetup()};$(box).appendChild(e)})}
+function part(){return {body:f(manifest.dressup.bodies,S.body),top:f(manifest.dressup.tops,S.top),bottom:f(manifest.dressup.bottoms,S.bottom),shoes:f(manifest.dressup.shoes,S.shoes),stage:f(manifest.stages,S.stage),song:f(manifest.songs,S.song)}}
+function mult(){let p=part(), pow=(p.top.power+p.bottom.power+p.shoes.power), sets={};[p.top,p.bottom,p.shoes].forEach(x=>sets[x.set]=(sets[x.set]||0)+1);let b=Math.max(...Object.values(sets))>=3?.18:Math.max(...Object.values(sets))>=2?.08:0;if([p.top,p.bottom,p.shoes].some(x=>x.attr===p.body.theme))b+=.04;return [pow,1+pow/2200+b]}
+function apply(prefix){let p=part();$(prefix+'Base').src=p.body.image;$(prefix+'Top').src=p.top.image;$(prefix+'Bottom').src=p.bottom.image;$(prefix+'Shoes').src=p.shoes.image}
+function drawSetup(){item(manifest.dressup.bodies,'body','bodies');item(manifest.dressup.tops,'top','tops');item(manifest.dressup.bottoms,'bottom','bottoms');item(manifest.dressup.shoes,'shoes','shoes');item(manifest.stages,'stage','stages');item(manifest.songs,'song','songs');let p=part(),m=mult();apply('p');$('pName').textContent=p.body.name;$('pMeta').textContent=`${p.top.name} × ${p.bottom.name} × ${p.shoes.name}`;$('power').textContent=m[0];$('bonus').textContent=m[1].toFixed(2)+'x'}
+const c=$('canvas'),ctx=c.getContext('2d'),bgm=$('bgm');
+function resize(){let r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=r.width*d;c.height=r.height*d;ctx.setTransform(d,0,0,d,0,0)}
+function notes(bpm,dur){let a=[],beat=60/bpm,t=1.3,i=0;while(t<dur-1){[[0],[2],[1],[3],[0,3],[1],[2],[0],[1,2],[3]][i%10].forEach(l=>a.push({l,t,hit:false,miss:false}));t+=beat*(i%6==3?1.5:1);i++}return a}
+function start(){let p=part();$('setup').style.display='none';$('live').style.display='block';$('stageBg').style.backgroundImage=`url(${p.stage.image})`;$('songTitle').textContent=p.song.display;apply('l');resize();S.notes=notes(p.song.bpm,p.song.duration);S.score=0;S.combo=0;S.start=performance.now();S.run=true;bgm.src=p.song.audio;bgm.play().catch(()=>{});loop()}
+function quit(){S.run=false;bgm.pause();bgm.currentTime=0;$('live').style.display='none';$('setup').style.display='block'}
+function hit(l){if(!S.run)return;let now=(performance.now()-S.start)/1000,b=null,bd=9;for(let n of S.notes){if(n.l!==l||n.hit||n.miss)continue;let d=Math.abs(n.t-now);if(d<bd){bd=d;b=n}}if(!b||bd>.16){S.combo=0;$('judge').textContent='MISS';return}b.hit=true;S.combo++;S.score+=(bd<.06?1000:bd<.1?750:420)*mult()[1]*(1+Math.min(S.combo,100)*.003);$('judge').textContent=bd<.06?'PERFECT':bd<.1?'GREAT':'GOOD'}
+function loop(){if(!S.run)return;let p=part(),now=(performance.now()-S.start)/1000,w=c.clientWidth,h=c.clientHeight,lw=w/4,hy=h-92;ctx.clearRect(0,0,w,h);for(let i=0;i<4;i++){ctx.fillStyle=i%2?'#ffffff08':'#ffffff12';ctx.fillRect(i*lw,0,lw,h)}ctx.fillStyle='#11182788';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#ff7bc9';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,hy);ctx.lineTo(w,hy);ctx.stroke();for(let n of S.notes){if(n.hit||n.miss)continue;if(now-n.t>.18){n.miss=true;S.combo=0}let dt=n.t-now;if(dt>1.5||dt<-.2)continue;let y=(1-dt/1.5)*hy,x=n.l*lw+lw/2;ctx.fillStyle='#7ad7ff';ctx.beginPath();ctx.arc(x,y,22,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke()}$('score').textContent=Math.floor(S.score).toLocaleString();$('combo').textContent=S.combo;$('time').textContent=Math.max(0,p.song.duration-now).toFixed(1);if(now>p.song.duration+.5)quit();else requestAnimationFrame(loop)}
+document.querySelectorAll('.lane').forEach(b=>b.onpointerdown=()=>hit(+b.dataset.lane));addEventListener('keydown',e=>{let m={d:0,f:1,j:2,k:3}[e.key.toLowerCase()];if(m!==undefined)hit(m)});addEventListener('resize',resize);drawSetup();
+</script>
+</body>
+</html>

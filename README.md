@@ -1,37 +1,28 @@
 # Star Coordinate Live Dress-up+
 
-素体に名前がついた、着せ替えレイヤーシステム入りのローカル動作リズムゲームです。
+素体名つきの、着せ替えリズムゲーム試作です。
 
-## 内容
+## 中身
 
-- 素体 3人
-  - 星宮きらら
-  - 蒼月ルナ
-  - 桃瀬はにぃ
-- トップス 5種
-- スカート 5種
-- シューズ 5種
-- ステージ素材
-- 30秒仮歌つきBGM
-- リズムゲーム本体 `index.html`
+- `index.html`
 - `data/manifest.json`
+- `assets/images/`
+- `assets/audio/`
+- `assets/dressup/`
 
-## ローカルでの使い方
+## Codespacesでアップロードする場合
 
-1. 一式を展開する
-2. `index.html` をブラウザで開く
-3. 素体・トップス・スカート・シューズ・ステージ・曲を選ぶ
-4. ライブ開始
-5. 操作は `D / F / J / K` または画面下の4ボタン
+1. このzipをCodespacesにアップロード
+2. ターミナルで展開
+3. commitしてpush
 
-## GitHub Pages
+```bash
+unzip -o star_coordinate_codespaces_upload.zip
+rm star_coordinate_codespaces_upload.zip
+git status
+git add -A
+git commit -m "Add Star Coordinate Live dress-up prototype"
+git push origin main
+```
 
-`main` ブランチのルートを Pages に設定すると公開できます。
-
-## 注意
-
-画像生成素材を背景抜きして重ねる方式です。商用ゲーム級の完全な Live2D / Spine 用分割素材ではなく、HTML上で遊べるローカル試作用の着せ替えシステムです。
-
-## アップロードメモ
-
-このREADMEはChatGPT側から初期配置済みです。画像・音声を含む完全版一式はサイズが大きいため、ローカルから `git push` でアップロードしてください。
+GitHub Pagesで公開する場合は、`main` ブランチの root を Pages に設定してください。
