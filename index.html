@@ -16,7 +16,7 @@ h1,h2{margin:0 0 12px} .grid{display:grid;grid-template-columns:repeat(3,1fr);ga
 button{border:0;border-radius:999px;padding:13px 20px;font-weight:900;background:linear-gradient(135deg,#ff7bc9,#7ad7ff);color:#10121b;cursor:pointer}
 button.dark{background:#ffffff18;color:#fff;border:1px solid #ffffff24}
 .preview{position:sticky;top:12px} .doll{position:relative;height:660px;background:linear-gradient(#dffcf3,#c9fff5);border-radius:24px;overflow:hidden;border:1px solid #ffffff30}
-.layer{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.dollCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .info{position:absolute;left:12px;right:12px;bottom:12px;background:#111827aa;border:1px solid #ffffff24;border-radius:18px;padding:12px;backdrop-filter:blur(8px)}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px} .stat{background:#ffffff12;border-radius:16px;padding:12px} .big{font-size:26px;font-weight:950}
 #live{display:none} .stage{position:relative;height:720px;border-radius:24px;overflow:hidden;background:#111;border:1px solid #ffffff24}
@@ -39,7 +39,7 @@ button.dark{background:#ffffff18;color:#fff;border:1px solid #ffffff24}
     </main>
     <aside class="preview">
       <div class="doll">
-        <img id="pBase" class="layer"><img id="pTop" class="layer"><img id="pBottom" class="layer"><img id="pShoes" class="layer">
+        <canvas id="previewDoll" class="dollCanvas"></canvas>
         <div class="info"><div id="pName" class="name"></div><div id="pMeta" class="meta"></div></div>
       </div>
       <div class="panel"><div class="stats"><div class="stat"><div class="meta">Power</div><div id="power" class="big">0</div></div><div class="stat"><div class="meta">Bonus</div><div id="bonus" class="big">1.00x</div></div></div><br><button onclick="start()">ライブ開始</button></div>
@@ -49,7 +49,7 @@ button.dark{background:#ffffff18;color:#fff;border:1px solid #ffffff24}
 <div id="live" class="screen">
  <div class="wrap">
   <main>
-    <div class="stage"><div id="stageBg"></div><div class="liveDoll"><img id="lBase" class="layer"><img id="lTop" class="layer"><img id="lBottom" class="layer"><img id="lShoes" class="layer"></div><canvas id="canvas"></canvas><div class="hud"><div class="badge" id="songTitle"></div><div class="badge" id="time">30.0</div></div></div>
+    <div class="stage"><div id="stageBg"></div><div class="liveDoll"><canvas id="liveDoll" class="dollCanvas"></canvas></div><canvas id="canvas"></canvas><div class="hud"><div class="badge" id="songTitle"></div><div class="badge" id="time">30.0</div></div></div>
     <div id="judge" class="judge"></div>
     <div class="lanes"><button class="lane" data-lane="0">D</button><button class="lane" data-lane="1">F</button><button class="lane" data-lane="2">J</button><button class="lane" data-lane="3">K</button></div>
   </main>
@@ -64,16 +64,39 @@ const $=id=>document.getElementById(id), f=(a,id)=>a.find(x=>x.id===id);
 function item(arr,key,box){$(box).innerHTML='';arr.forEach(x=>{let e=document.createElement('div');e.className='card '+(S[key]===x.id?'sel':'');e.innerHTML=`<img src="${x.image}"><div class="body"><div class="name">${x.name||x.display}</div><div class="meta">${x.desc||x.set||x.theme||''} ${x.power?' / Power '+x.power:''}</div></div>`;e.onclick=()=>{S[key]=x.id;drawSetup()};$(box).appendChild(e)})}
 function part(){return {body:f(manifest.dressup.bodies,S.body),top:f(manifest.dressup.tops,S.top),bottom:f(manifest.dressup.bottoms,S.bottom),shoes:f(manifest.dressup.shoes,S.shoes),stage:f(manifest.stages,S.stage),song:f(manifest.songs,S.song)}}
 function mult(){let p=part(), pow=(p.top.power+p.bottom.power+p.shoes.power), sets={};[p.top,p.bottom,p.shoes].forEach(x=>sets[x.set]=(sets[x.set]||0)+1);let b=Math.max(...Object.values(sets))>=3?.18:Math.max(...Object.values(sets))>=2?.08:0;if([p.top,p.bottom,p.shoes].some(x=>x.attr===p.body.theme))b+=.04;return [pow,1+pow/2200+b]}
-function apply(prefix){let p=part();$(prefix+'Base').src=p.body.image;$(prefix+'Top').src=p.top.image;$(prefix+'Bottom').src=p.bottom.image;$(prefix+'Shoes').src=p.shoes.image}
-function drawSetup(){item(manifest.dressup.bodies,'body','bodies');item(manifest.dressup.tops,'top','tops');item(manifest.dressup.bottoms,'bottom','bottoms');item(manifest.dressup.shoes,'shoes','shoes');item(manifest.stages,'stage','stages');item(manifest.songs,'song','songs');let p=part(),m=mult();apply('p');$('pName').textContent=p.body.name;$('pMeta').textContent=`${p.top.name} × ${p.bottom.name} × ${p.shoes.name}`;$('power').textContent=m[0];$('bonus').textContent=m[1].toFixed(2)+'x'}
+const imageCache=new Map(), boundsCache=new Map();
+function loadImage(src){
+  if(!imageCache.has(src))imageCache.set(src,new Promise((resolve,reject)=>{let img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src}));
+  return imageCache.get(src);
+}
+function getAlphaBounds(image){
+  let key=image.currentSrc||image.src;if(boundsCache.has(key))return boundsCache.get(key);
+  let scan=document.createElement('canvas'),sw=image.naturalWidth||image.width,sh=image.naturalHeight||image.height;
+  scan.width=sw;scan.height=sh;let sctx=scan.getContext('2d');sctx.drawImage(image,0,0,sw,sh);
+  let data=sctx.getImageData(0,0,sw,sh).data,minX=sw,minY=sh,maxX=-1,maxY=-1;
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){if(data[(y*sw+x)*4+3]>0){if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y}}
+  let b=maxX<0?{x:0,y:0,w:sw,h:sh}:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};boundsCache.set(key,b);return b;
+}
+function drawCroppedPart(ctx,image,slot){let b=getAlphaBounds(image);ctx.drawImage(image,b.x,b.y,b.w,b.h,slot.x,slot.y,slot.w,slot.h)}
+async function renderDoll(canvasId){
+  let canvas=$(canvasId),r=canvas.getBoundingClientRect(),d=devicePixelRatio||1,p=part();
+  if(!r.width||!r.height)return;canvas.width=r.width*d;canvas.height=r.height*d;
+  let dctx=canvas.getContext('2d');dctx.setTransform(d,0,0,d,0,0);dctx.clearRect(0,0,r.width,r.height);
+  let [base,top,bottom,shoes]=await Promise.all([loadImage(p.body.image),loadImage(p.top.image),loadImage(p.bottom.image),loadImage(p.shoes.image)]);
+  dctx.drawImage(base,0,0,r.width,r.height);
+  drawCroppedPart(dctx,top,{x:.15*r.width,y:.20*r.height,w:.70*r.width,h:.32*r.height});
+  drawCroppedPart(dctx,bottom,{x:.16*r.width,y:.40*r.height,w:.68*r.width,h:.25*r.height});
+  drawCroppedPart(dctx,shoes,{x:.24*r.width,y:.73*r.height,w:.52*r.width,h:.18*r.height});
+}
+function drawSetup(){item(manifest.dressup.bodies,'body','bodies');item(manifest.dressup.tops,'top','tops');item(manifest.dressup.bottoms,'bottom','bottoms');item(manifest.dressup.shoes,'shoes','shoes');item(manifest.stages,'stage','stages');item(manifest.songs,'song','songs');let p=part(),m=mult();renderDoll('previewDoll');$('pName').textContent=p.body.name;$('pMeta').textContent=`${p.top.name} × ${p.bottom.name} × ${p.shoes.name}`;$('power').textContent=m[0];$('bonus').textContent=m[1].toFixed(2)+'x'}
 const c=$('canvas'),ctx=c.getContext('2d'),bgm=$('bgm');
 function resize(){let r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=r.width*d;c.height=r.height*d;ctx.setTransform(d,0,0,d,0,0)}
 function notes(bpm,dur){let a=[],beat=60/bpm,t=1.3,i=0;while(t<dur-1){[[0],[2],[1],[3],[0,3],[1],[2],[0],[1,2],[3]][i%10].forEach(l=>a.push({l,t,hit:false,miss:false}));t+=beat*(i%6==3?1.5:1);i++}return a}
-function start(){let p=part();$('setup').style.display='none';$('live').style.display='block';$('stageBg').style.backgroundImage=`url(${p.stage.image})`;$('songTitle').textContent=p.song.display;apply('l');resize();S.notes=notes(p.song.bpm,p.song.duration);S.score=0;S.combo=0;S.start=performance.now();S.run=true;bgm.src=p.song.audio;bgm.play().catch(()=>{});loop()}
+function start(){let p=part();$('setup').style.display='none';$('live').style.display='block';$('stageBg').style.backgroundImage=`url(${p.stage.image})`;$('songTitle').textContent=p.song.display;renderDoll('liveDoll');resize();S.notes=notes(p.song.bpm,p.song.duration);S.score=0;S.combo=0;S.start=performance.now();S.run=true;bgm.src=p.song.audio;bgm.play().catch(()=>{});loop()}
 function quit(){S.run=false;bgm.pause();bgm.currentTime=0;$('live').style.display='none';$('setup').style.display='block'}
 function hit(l){if(!S.run)return;let now=(performance.now()-S.start)/1000,b=null,bd=9;for(let n of S.notes){if(n.l!==l||n.hit||n.miss)continue;let d=Math.abs(n.t-now);if(d<bd){bd=d;b=n}}if(!b||bd>.16){S.combo=0;$('judge').textContent='MISS';return}b.hit=true;S.combo++;S.score+=(bd<.06?1000:bd<.1?750:420)*mult()[1]*(1+Math.min(S.combo,100)*.003);$('judge').textContent=bd<.06?'PERFECT':bd<.1?'GREAT':'GOOD'}
 function loop(){if(!S.run)return;let p=part(),now=(performance.now()-S.start)/1000,w=c.clientWidth,h=c.clientHeight,lw=w/4,hy=h-92;ctx.clearRect(0,0,w,h);for(let i=0;i<4;i++){ctx.fillStyle=i%2?'#ffffff08':'#ffffff12';ctx.fillRect(i*lw,0,lw,h)}ctx.fillStyle='#11182788';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#ff7bc9';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,hy);ctx.lineTo(w,hy);ctx.stroke();for(let n of S.notes){if(n.hit||n.miss)continue;if(now-n.t>.18){n.miss=true;S.combo=0}let dt=n.t-now;if(dt>1.5||dt<-.2)continue;let y=(1-dt/1.5)*hy,x=n.l*lw+lw/2;ctx.fillStyle='#7ad7ff';ctx.beginPath();ctx.arc(x,y,22,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke()}$('score').textContent=Math.floor(S.score).toLocaleString();$('combo').textContent=S.combo;$('time').textContent=Math.max(0,p.song.duration-now).toFixed(1);if(now>p.song.duration+.5)quit();else requestAnimationFrame(loop)}
-document.querySelectorAll('.lane').forEach(b=>b.onpointerdown=()=>hit(+b.dataset.lane));addEventListener('keydown',e=>{let m={d:0,f:1,j:2,k:3}[e.key.toLowerCase()];if(m!==undefined)hit(m)});addEventListener('resize',resize);drawSetup();
+document.querySelectorAll('.lane').forEach(b=>b.onpointerdown=()=>hit(+b.dataset.lane));addEventListener('keydown',e=>{let m={d:0,f:1,j:2,k:3}[e.key.toLowerCase()];if(m!==undefined)hit(m)});addEventListener('resize',()=>{resize();renderDoll('previewDoll');if(S.run)renderDoll('liveDoll')});drawSetup();
 </script>
 </body>
 </html>
